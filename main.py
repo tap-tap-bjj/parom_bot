@@ -97,12 +97,14 @@ def start(update: Update, context: CallbackContext):
 def check_sites(update: Update, context: CallbackContext):
     """Обработчик команды /check_sites"""
     # Проверяем сайт https://imex-service.ru/booking/
-    site_url1 = "https://imex-service.ru/booking/"
-    selector1 = "#departureRoute option[value='1']"
+    site_url = "https://imex-service.ru/booking/"
+    selector = "#departureRoute option[value='1']"
     selector2 = "#transportType option[value='TR']"
-    new_text1 = check_site(browser, site_url1, selector1, selector2)
+    new_text1 = check_site(browser, site_url, selector, selector2)
     if new_text1 is not None:
-        context.bot.send_message(chat_id=update.effective_chat.id, text=f"Изменение на сайте {site_url1}:\n{new_text1}")
+        context.bot.send_message(chat_id=update.effective_chat.id, text=f"Изменение на сайте {site_url}:\n{new_text1}")
+    else:
+        context.bot.send_message(chat_id=update.effective_chat.id, text=f"Сайт {site_url} не изменился.")
 
     # Проверяем сайт https://booking.transbc.ru/
     site_url2 = "https://booking.transbc.ru/"
@@ -111,6 +113,8 @@ def check_sites(update: Update, context: CallbackContext):
     new_text2 = check_site(browser, site_url2, selector1, selector2)
     if new_text2 is not None:
         context.bot.send_message(chat_id=update.effective_chat.id, text=f"Изменение на сайте {site_url2}:\n{new_text2}")
+    else:
+        context.bot.send_message(chat_id=update.effective_chat.id, text=f"Сайт {site_url2} не изменился.")
 
 
 def set_interval(update: Update, context: CallbackContext):
@@ -220,5 +224,5 @@ if __name__ == '__main__':
     dispatcher.add_handler(CommandHandler("set_interval", set_interval))
     dispatcher.add_handler(MessageHandler(filters=Filters.text & ~Filters.command, callback=interval_input))
     # Запуск бота
-    updater.start_polling()
+    updater.start_polling(poll_interval=0)
     updater.idle()
