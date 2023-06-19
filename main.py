@@ -63,16 +63,16 @@ def check_site(browser, site_url, selector1, selector2):
         element.click()
 
         # Ожидание загрузки сайта после выбора элемента
-        time.sleep(2)
+        time.sleep(5)
 
     if selector2:
         element = browser.find_element(By.CSS_SELECTOR, selector2)
         element.click()
 
         # Ожидание загрузки сайта после выбора элемента
-        time.sleep(2)
+        time.sleep(5)
 
-    new_text = browser.find_element(By.CSS_SELECTOR, "input.form-control").text
+    new_text = browser.find_element(By.CSS_SELECTOR, "#app > div > div > main > div.py-5.row.g-5 > div.col-lg-12.col-xl-4").text
 
     if site_url in site_states:
         old_text = site_states[site_url]
@@ -86,7 +86,7 @@ def check_site(browser, site_url, selector1, selector2):
         # Сайт еще не отслеживается, сохраняем его состояние
         site_states[site_url] = new_text
 
-    return None
+    # return None
 
 
 def start(update: Update, context: CallbackContext):
@@ -136,7 +136,7 @@ def check_sites_periodically(context: CallbackContext):
     Выполняет периодическую проверку сайтов и отправляет отчет каждые 12 часов.
     """
     current_time = time.strftime("%H:%M:%S", time.localtime())
-    # context.bot.send_message(chat_id=chat_id, text=f"Периодическая проверка сайтов. Время: {current_time}")
+
 
     # Проверяем сайт https://imex-service.ru/booking/
     site_url1 = "https://imex-service.ru/booking/"
@@ -144,7 +144,7 @@ def check_sites_periodically(context: CallbackContext):
     selector2 = "#transportType option[value='TR']"
     new_text1 = check_site(browser, site_url1, selector1, selector2)
     if new_text1 is not None:
-        context.bot.send_message(chat_id=chat_id, text=f"Изменение на сайте {site_url1}:\n{new_text1}")
+        context.bot.send_message(chat_id=chat_id, text=f"Изменение на сайте {site_url1}:\n{new_text1} время {current_time}")
 
     # Проверяем сайт https://booking.transbc.ru/
     site_url2 = "https://booking.transbc.ru/"
@@ -152,7 +152,7 @@ def check_sites_periodically(context: CallbackContext):
     selector2 = "#transportType option[value='TR']"
     new_text2 = check_site(browser, site_url2, selector1, selector2)
     if new_text2 is not None:
-        context.bot.send_message(chat_id=chat_id, text=f"Изменение на сайте {site_url2}:\n{new_text2}")
+        context.bot.send_message(chat_id=chat_id, text=f"Изменение на сайте {site_url2}:\n{new_text2} время {current_time}")
 
     # Запускаем функцию daily_report для вывода ежедневного отчета
     daily_report(context)
