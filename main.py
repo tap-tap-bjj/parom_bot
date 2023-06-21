@@ -42,6 +42,8 @@ commands = [
 # список кнопок при инициализации клавиатуры
 keyboard = ReplyKeyboardMarkup(commands, resize_keyboard=True)
 
+# Отправка сообщения в чат Telegram
+bot.send_message(chat_id=chat_id, text=f"Запуск бота! Время сервера: {current_time} (мск)")
 
 def send_telegram_message(text):
     """
