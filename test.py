@@ -10,6 +10,7 @@ from telegram import Update, ReplyKeyboardMarkup, Bot
 from telegram.ext import Updater, CommandHandler, CallbackContext
 import ssl
 import certifi
+import os
 
 # Токен Telegram
 bot_token = '6121370662:AAGuOtP_Di7TZNA4b0V4qxn1NCn_MJyijC8'
@@ -39,11 +40,11 @@ site_states = {}
 # список кнопок с командами
 commands = [
     ['/start', '/check_sites'],
-    ['/view_site_states']  # Добавлена кнопка '/view_site_states'
+    ['/view_site_states'], ['/fill_site_IMEX', '/fill_site_TBC']
 ]
 
 # список кнопок при инициализации клавиатуры
-keyboard = ReplyKeyboardMarkup(commands, resize_keyboard=True)
+keyboard = ReplyKeyboardMarkup(commands, resize_keyboard=True, one_time_keyboard=True)
 
 # Отправка сообщения в чат Telegram
 bot.send_message(chat_id=chat_id, text=f"Запуск бота! Время сервера: {current_time} (мск)")
@@ -125,25 +126,6 @@ def check_sites(update: Update, context: CallbackContext):
         context.bot.send_message(chat_id=update.effective_chat.id, text=f"Сайт {site_url2} не изменился.")
 
 
-def set_interval(update: Update, context: CallbackContext):
-    """Обработчик команды /set_interval"""
-    # Устанавливаем интервал в 60 секунд
-    interval = 60
-    context.job_queue.run_repeating(check_sites_periodically, interval, context=interval, first=0)
-
-    context.bot.send_message(chat_id=update.effective_chat.id, text=f"Функция check_sites_periodically будет "
-                                                                  f"выполняться каждые {interval} секунд.")
-
-
-# def interval_input(update: Update, context: CallbackContext):
-    """Обработчик ввода интервала"""
-    interval = int(update.message.text)
-    context.job_queue.run_repeating(check_sites_periodically, interval, context=interval, first=0)
-
-    context.bot.send_message(chat_id=update.effective_chat.id, text=f"Функция check_sites_periodically будет "
-                                                                  f"выполняться каждые {interval} секунд.")
-
-
 def check_sites_periodically(context: CallbackContext):
     """
     Выполняет периодическую проверку сайтов и # отправляет отчет каждые 12 часов.
@@ -165,6 +147,26 @@ def check_sites_periodically(context: CallbackContext):
 
     # Запускаем функцию daily_report для вывода ежедневного отчета
     # daily_report(context)
+
+def execute_inputform_file(url):
+    # Путь к исполняемому файлу, который нужно запустить
+    file_path = 'inputform.py'
+
+    # Создание команды запуска другого файла с передачей аргументов
+    command = f'python {file_path} --url "{url}"'
+
+    # Запуск команды
+    os.system(command)
+
+def fill_site1(update: Update, context: CallbackContext):
+    """Обработчик команды /fill_site1"""
+    context.bot.send_message(chat_id=update.effective_chat.id, text=f"Запускаю заполнение сайта {site_url1}")
+    execute_inputform_file(site_url1)
+
+def fill_site2(update: Update, context: CallbackContext):
+    """Обработчик команды /fill_site2"""
+    context.bot.send_message(chat_id=update.effective_chat.id, text=f"Запускаю заполнение сайта {site_url2}")
+    execute_inputform_file(site_url2)
 
 
 if __name__ == '__main__':
@@ -195,7 +197,9 @@ if __name__ == '__main__':
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("check_sites", check_sites))
     dispatcher.add_handler(CommandHandler("view_site_states", view_site_states))
-    # dispatcher.add_handler(MessageHandler(filters=Filters.text & ~Filters.command, callback=interval_input))
+    dispatcher.add_handler(CommandHandler("fill_site_IMEX", fill_site1))
+    dispatcher.add_handler(CommandHandler("fill_site_TBC", fill_site2))
+
     # Запуск бота
     updater.start_polling(poll_interval=0)
     updater.idle()
