@@ -18,6 +18,8 @@ chat_id = '351583809'
 
 # Peremenaya tekushego vremeni i intervala proverki
 current_time = time.strftime("%H:%M:%S", time.localtime())
+
+# УСТАНОВКА ИНТЕРВАЛА ПРОВЕРКИ!!!
 interval = 30
 
 #Сайты для проверки
