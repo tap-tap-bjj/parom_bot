@@ -11,6 +11,7 @@ from telegram.ext import Updater, CommandHandler, CallbackContext
 import ssl
 import certifi
 import os
+from fake_useragent import UserAgent
 
 # Токен Telegram
 bot_token = '6121370662:AAGuOtP_Di7TZNA4b0V4qxn1NCn_MJyijC8'
@@ -20,7 +21,7 @@ chat_id = '351583809'
 current_time = time.strftime("%H:%M:%S", time.localtime())
 
 # УСТАНОВКА ИНТЕРВАЛА ПРОВЕРКИ!!!
-interval = 30
+interval = 60
 
 #Сайты для проверки
 site_url1 = "https://imex-service.ru/booking/"
@@ -49,14 +50,14 @@ commands = [
 keyboard = ReplyKeyboardMarkup(commands, resize_keyboard=True, one_time_keyboard=True)
 
 # Отправка сообщения в чат Telegram
-bot.send_message(chat_id=chat_id, text=f"Запуск бота! Время сервера: {current_time} (мск)")
+bot.send_message(chat_id=chat_id, text=f"Запуск бота! Время сервера: {current_time} (мск)", reply_markup=keyboard)
 
 def view_site_states(update: Update, context: CallbackContext):
     """Обработчик команды /view_site_states"""
     # Преобразование словаря site_states в строку
     print(site_states)
     site_states_str = '\n'.join([f"{url}: {state}" for url, state in site_states.items()])
-    context.bot.send_message(chat_id=update.effective_chat.id, text=f"Состояние сайтов:\n{site_states_str}")
+    bot.send_message(chat_id=chat_id, text=f"Состояние сайтов:\n{site_states_str}")
 
 
 def check_site(browser, site_url, selector1, selector2):
@@ -171,18 +172,23 @@ def fill_site2(update: Update, context: CallbackContext):
     execute_inputform_file(site_url2)
 
 
+
+
 if __name__ == '__main__':
     # Инициализация браузера
     # Путь к исполняемому файлу chromedriver
-    path_to_chromedriver = 'C:\chromedriver\chromedriver.exe'
+    path_to_chromedriver = '/usr/bin/chromedriver'
 
     # Создание объекта сервиса
     service = Service(path_to_chromedriver)
 
     # Создание объекта опций
     options = Options()
+    ua = UserAgent()
     options.add_argument("--headless")  # Запуск Chrome в режиме без графического интерфейса
     options.add_argument("--no-sandbox")
+    options.add_argument("--window-size=1920,1080")
+    options.add_argument(f"--user-agent={ua}")
 
 
     # Создание экземпляра браузера Chrome

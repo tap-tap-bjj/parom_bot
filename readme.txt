@@ -1,4 +1,4 @@
-Для запуска службы выполните эти 2 команды.
+Для запуска службы выполните эти 2 команды. (для файла test запускаем testbot, для inputform - inputform)
 
 systemctl enable parombot
 systemctl start parombot
