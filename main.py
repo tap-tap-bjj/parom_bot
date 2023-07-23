@@ -159,60 +159,7 @@ def check_sites_periodically(context: CallbackContext):
     if new_text2 is not None:
         context.bot.send_message(chat_id=chat_id, text=f"Изменение на сайте {site_url2}:\n{new_text2} время {current_time}")
 
-    # Запускаем функцию daily_report для вывода ежедневного отчета
-    # daily_report(context)
 
-
-# Переменная для отслеживания времени последнего отчета
-last_daily_report_time = None
-
-# Список для хранения журнала логов
-log = []
-
-def daily_report(context: CallbackContext):
-    """
-    Выводит ежедневный отчет, включающий количество проведенных проверок,
-    изменения на сайтах и журнал логов.
-    """
-    global log, last_daily_report_time
-
-    # Проверяем, прошло ли достаточно времени с момента последнего отчета
-    if last_daily_report_time is None or datetime.datetime.now().hour == 0:
-        # Обновляем время последнего отчета
-        last_daily_report_time = datetime.datetime.now()
-
-        # Переменные для отчета
-        total_checks = 0
-        changes = []
-
-        # Перебираем сайты для проверки
-        for site_url in site_states.keys():
-            total_checks += 1
-            if site_states[site_url] not in log:
-                changes.append((site_url, site_states[site_url]))
-                log.append(site_states[site_url])
-
-        # Отправляем отчет
-        report = f"Ежедневный отчет:\n\n"
-        report += f"Количество проведенных проверок за 24 часа: {total_checks}\n"
-
-        if len(changes) > 0:
-            report += f"\nИзменения на сайтах:\n"
-            for change in changes:
-                site_url, change_time = change
-                report += f"Сайт: {site_url}\nВремя изменения: {change_time}\n\n"
-        else:
-            report += f"\nИзменений на сайтах не обнаружено.\n"
-
-        # Добавляем журнал логов
-        report += f"\nЖурнал логов:\n"
-        report += "\n".join(log)
-
-        # Отправляем отчет в Telegram
-        send_telegram_message(report)
-
-    # Планируем следующий отчет через 24 часа
-    context.job_queue.run_once(daily_report, 24 * 60 * 60, context=context)
 
 
 if __name__ == '__main__':
@@ -223,6 +170,10 @@ if __name__ == '__main__':
     # Создание объекта сервиса
     service = Service(path_to_chromedriver)
 
+    # УСТАНОВКА ИНТЕРВАЛА ПРОВЕРКИ!!!
+    interval = 30
+    browser_busy = False
+
     # Создание объекта опций
     options = Options()
     options.add_argument("--headless")  # Запуск Chrome в режиме без графического интерфейса
@@ -231,12 +182,13 @@ if __name__ == '__main__':
 
     # Создание экземпляра браузера Chrome
     browser = webdriver.Chrome(service=service, options=options)
-
-
+    browser.implicitly_wait(10)
 
     # Инициализация бота
     updater = Updater(token=bot_token, use_context=True)
     dispatcher = updater.dispatcher
+    # Запуск периодической проверки
+    updater.job_queue.run_repeating(check_sites_periodically, interval=interval)
 
     # Регистрация обработчиков команд
     dispatcher.add_handler(CommandHandler("start", start))

@@ -12,7 +12,6 @@ from twocaptcha import TwoCaptcha
 import random
 import time
 import logging
-import argparse
 from telegram import Bot, ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
@@ -23,14 +22,6 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 bot_token = '6384150489:AAHAh62Z2gK5VcLkiAonoXbsD_W9ttnzXUY'
 chat_id = '351583809'
 bot = Bot(token=bot_token)
-
-# Создание парсера аргументов командной строки
-parser = argparse.ArgumentParser()
-parser.add_argument('--url', help='Ссылка на сайт')
-# Парсинг аргументов командной строки
-args = parser.parse_args()
-# Получение значения ссылки из аргументов командной строки
-url = args.url
 
 # Словарb с данными для заполнения полей
 data_car = {
@@ -78,13 +69,11 @@ bot.send_message(chat_id=chat_id, text='Привет я бот для запол
 def send_menu_message(chat_id, text, reply_markup):
     updater.bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
 
-
 # Обработчик команды /start
 def start(update, context):
     user = update.effective_user
     context.user_data['state'] = STATE_MAIN_MENU
     send_menu_message(user.id, 'Выберите сайт для заполнения:', keyboard1)
-
 
 # Обработчик сообщений
 def handle_message(update, context):
@@ -125,37 +114,10 @@ def handle_message(update, context):
                 stop = 3
                 send_menu_message(user.id, 'Заполняем все прицепы', keyboard2)
 
-            print(start, stop, url)
+
             fill_zayvka(start, stop, url)
             context.user_data['state'] = STATE_MAIN_MENU
             send_menu_message(user.id, 'Выберите сайт для заполнения:', keyboard1)
-
-
-# Регистрация обработчиков
-dispatcher.add_handler(CommandHandler('start', start))
-dispatcher.add_handler(MessageHandler(Filters.text & (~Filters.command), handle_message))
-
-# Запуск бота
-updater.start_polling()
-
-# Инициализация браузера
-# Путь к исполняемому файлу chromedriver
-path_to_chromedriver = 'C:\chromedriver\chromedriver.exe'
-
-# Создание объекта сервиса
-service = Service(path_to_chromedriver)
-
-# Создание объекта опций
-ua = UserAgent()
-options = Options()
-options.add_argument("--headless")  # Запуск Chrome в режиме без графического интерфейса
-options.add_argument("--no-sandbox")
-options.add_argument("--window-size=1920,1080")
-options.add_argument(f"--user-agent={ua}")
-
-# Создание экземпляра браузера Chrome
-browser = webdriver.Chrome(service=service, options=options)
-browser.implicitly_wait(10)
 
 def first_step(browser, site_url, selector1, selector2):
     """
@@ -192,7 +154,6 @@ def sender_solve(path):
     #Обновляем словарь для дальнейшего извлечения ID капчи и отправки репорта
     dict_resut.update(result)
     return result['code']
-
 
 def captcha():
     #Переключаемся на iframe капчи
@@ -244,115 +205,115 @@ def captcha():
         bot.send_message(chat_id=chat_id, text=f"Ошибка в капче (возможно не понадобилась картинка): {str(E)}")
 
 def fill_zayvka(arg1, arg2, url):
+    for i in range(arg1, arg2):
         try:
-            # Цикл для заполнения формы первой вкладки
-            for i in range(arg1, arg2):
-                if url == 'https://imex-service.ru/booking/':
-                    selector1_1 = "#departureRoute option[value='1']"
-                    selector1_2 = "#transportType option[value='TR']"
-                    first_step(browser, url, selector1_1, selector1_2)
-                elif url == 'https://booking.transbc.ru/':
-                    selector2_1 = "#departureRoute option[value='0']"
-                    selector2_2 = "#transportType option[value='TR']"
-                    first_step(browser, url, selector2_1, selector2_2)
+        # Цикл для заполнения формы первой вкладки
+            if url == 'https://imex-service.ru/booking/':
+                selector1_1 = "#departureRoute option[value='1']"
+                selector1_2 = "#transportType option[value='TR']"
+                first_step(browser, url, selector1_1, selector1_2)
+            elif url == 'https://booking.transbc.ru/':
+                selector2_1 = "#departureRoute option[value='3']"
+                selector2_2 = "#transportType option[value='TR']"
+                first_step(browser, url, selector2_1, selector2_2)
 
-                # Выбор доступной даты из списка
-                # Нахождение элемента выпадающего списка по селектору
-                dropdown = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#departureDate')))
-                # Прокручиваем страницу до видимости элемента
-                browser.execute_script("arguments[0].scrollIntoView();", dropdown)
-                dropdown.click()
-                select = Select(dropdown)
-                # Выбор случайного элемента по индексу
-                select.select_by_index(random.choice(range(len(select.options))))
+            # Выбор доступной даты из списка
+            # Нахождение элемента выпадающего списка по селектору
+            dropdown = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#departureDate')))
+            # Прокручиваем страницу до видимости элемента
+            browser.execute_script("arguments[0].scrollIntoView();", dropdown)
+            dropdown.click()
+            select = Select(dropdown)
+            # Выбор случайного элемента по индексу
+            select.select_by_index(random.choice(range(len(select.options))))
 
-                # Ожидание появления кнопки "Продолжить"
-                button = WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button.btn-success")))
-                # Прокручиваем страницу до видимости элемента
-                browser.execute_script("arguments[0].scrollIntoView();", button)
-                time.sleep(1)
-                button.click()
-                time.sleep(1)
+            # Ожидание появления кнопки "Продолжить"
+            button = WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button.btn-success")))
+            # Прокручиваем страницу до видимости элемента
+            browser.execute_script("arguments[0].scrollIntoView();", button)
+            time.sleep(1)
+            button.click()
+            time.sleep(1)
 
-                # Переходим на вкладку "Транспорт и груз"
-                # Отмечаем чекбокс Груз-Есть
-                checkbox = browser.find_element(By.CSS_SELECTOR, "#radio10")
-                browser.execute_script("arguments[0].scrollIntoView({behavior: 'auto', block: 'center', inline: 'center'});", checkbox)
+            # Переходим на вкладку "Транспорт и груз"
+            # Отмечаем чекбокс Груз-Есть
+            checkbox = browser.find_element(By.CSS_SELECTOR, "#radio10")
+            browser.execute_script("arguments[0].scrollIntoView({behavior: 'auto', block: 'center', inline: 'center'});", checkbox)
+            time.sleep(1)
+            if not checkbox.is_selected():
+                checkbox.click()
+            browser.execute_script("arguments[0].scrollIntoView();", browser.find_element(By.CSS_SELECTOR, 'h4'))
+
+            # Заполняем инпуты "Данные прицепа"
+            for key, value in data_car.items():
+                # Находим поле ввода по CSS-селектору и вводим соответствующее значение
+                input_field = browser.find_element(By.CSS_SELECTOR, key)
+                browser.execute_script("arguments[0].scrollIntoView();", input_field)
+                input_field.clear()
+                input_field.send_keys(value[i]) # Значение для каждого прицепа выбирается отдельно по индексу значения
+
+            # Заполняем инпуты "Габариты прицепа и груз"
+            for key, value in data_car_const.items():
+                # Находим поле ввода по CSS-селектору и вводим соответствующее значение
+                input_field = browser.find_element(By.CSS_SELECTOR, key)
+                input_field.send_keys(Keys.CONTROL + 'a')
+                input_field.send_keys(Keys.DELETE)
+                browser.execute_script("arguments[0].scrollIntoView();", input_field)
+                input_field.send_keys(value)
+
+            # Ждем чуть и продолжить
+            button = WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button.btn-success")))
+            browser.execute_script("arguments[0].scrollIntoView();", button)
+            time.sleep(1)
+            button.click()
+            time.sleep(1)
+
+            # Переход на вкладку "Данные"
+            # Отмечаем нужные чекбоксы на юр. лицо и одну фирму
+            data_chekbox = ['#company-ul-Плательщик', '#matchPayer-Отправитель', '#matchPayer-Получатель', '#PaymentBill']
+            for value in data_chekbox:
+                checkbox = browser.find_element(By.CSS_SELECTOR, value)
+                browser.execute_script("arguments[0].scrollIntoView();", checkbox)
                 time.sleep(1)
                 if not checkbox.is_selected():
                     checkbox.click()
-                browser.execute_script("arguments[0].scrollIntoView();", browser.find_element(By.CSS_SELECTOR, 'h4'))
 
-                # Заполняем инпуты "Данные прицепа"
-                for key, value in data_car.items():
-                    # Находим поле ввода по CSS-селектору и вводим соответствующее значение
-                    input_field = browser.find_element(By.CSS_SELECTOR, key)
-                    browser.execute_script("arguments[0].scrollIntoView();", input_field)
-                    input_field.clear()
-                    input_field.send_keys(value[i]) # Значение для каждого прицепа выбирается отдельно по индексу значения
+            # Заполняем ИНН
+            inn_input = browser.find_element(By.CSS_SELECTOR, '[title="ИНН"]')
+            browser.execute_script("arguments[0].scrollIntoView();", inn_input)
+            inn_input.clear()
+            inn_input.send_keys('3906982908')
 
-                # Заполняем инпуты "Габариты прицепа и груз"
-                for key, value in data_car_const.items():
-                    # Находим поле ввода по CSS-селектору и вводим соответствующее значение
-                    input_field = browser.find_element(By.CSS_SELECTOR, key)
-                    input_field.send_keys(Keys.CONTROL + 'a')
-                    input_field.send_keys(Keys.DELETE)
-                    browser.execute_script("arguments[0].scrollIntoView();", input_field)
-                    input_field.send_keys(value)
+            # Клац по кнопке заполнить и ждем заполнения
+            time.sleep(1)
+            button_zapolnit = browser.find_element(By.CSS_SELECTOR, 'button.btn-success')
+            button_zapolnit.click()
+            time.sleep(1)
+            WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '[placeholder="Введите должность"]')))
+            time.sleep(1)
 
-                # Ждем чуть и продолжить
-                button = WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button.btn-success")))
-                browser.execute_script("arguments[0].scrollIntoView();", button)
-                time.sleep(1)
-                button.click()
-                time.sleep(1)
+            # Заполняем инпуты "Данные фирмы"
+            for key, value in data_firm.items():
+                # Находим поле ввода по CSS-селектору и вводим соответствующее значение
+                input_field = browser.find_element(By.CSS_SELECTOR, key)
+                browser.execute_script("arguments[0].scrollIntoView();", input_field)
+                input_field.clear()
+                input_field.send_keys(value)
 
-                # Переход на вкладку "Данные"
-                # Отмечаем нужные чекбоксы на юр. лицо и одну фирму
-                data_chekbox = ['#company-ul-Плательщик', '#matchPayer-Отправитель', '#matchPayer-Получатель', '#PaymentBill']
-                for value in data_chekbox:
-                    checkbox = browser.find_element(By.CSS_SELECTOR, value)
-                    browser.execute_script("arguments[0].scrollIntoView();", checkbox)
-                    time.sleep(1)
-                    if not checkbox.is_selected():
-                        checkbox.click()
+            # Действия для кнопки "Capcha"))))
+            captcha()
 
-                # Заполняем ИНН
-                inn_input = browser.find_element(By.CSS_SELECTOR, '[title="ИНН"]')
-                browser.execute_script("arguments[0].scrollIntoView();", inn_input)
-                inn_input.clear()
-                inn_input.send_keys('3906982908')
+            bot.send_message(chat_id=chat_id, text=f"Данные заявки: \n {browser.find_element(By.CSS_SELECTOR, 'ul.list-group.mb-3').text}")
 
-                # Клац по кнопке заполнить и ждем заполнения
-                time.sleep(1)
-                button_zapolnit = browser.find_element(By.CSS_SELECTOR, 'button.btn-success')
-                button_zapolnit.click()
-                time.sleep(1)
-                WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '[placeholder="Введите должность"]')))
-                time.sleep(1)
+            # Finally. Нажатие кнопки оформить
+            button = WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button.btn-success")))
+            browser.execute_script("arguments[0].scrollIntoView();", button)
+            time.sleep(1)
+            button.click() # Убираем финальную кнопку оформить на всякий
+            time.sleep(1)
 
-                # Заполняем инпуты "Данные фирмы"
-                for key, value in data_firm.items():
-                    # Находим поле ввода по CSS-селектору и вводим соответствующее значение
-                    input_field = browser.find_element(By.CSS_SELECTOR, key)
-                    browser.execute_script("arguments[0].scrollIntoView();", input_field)
-                    input_field.clear()
-                    input_field.send_keys(value)
-
-                # Действия для кнопки "Capcha"))))
-                captcha()
-
-                bot.send_message(chat_id=chat_id, text=f"Данные заявки: \n {browser.find_element(By.CSS_SELECTOR, 'ul.list-group.mb-3').text}")
-
-                # Finally. Нажатие кнопки оформить
-                button = WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button.btn-success")))
-                browser.execute_script("arguments[0].scrollIntoView();", button)
-                time.sleep(1)
-                #button.click() # Убираем финальную кнопку оформить на всякий
-                time.sleep(1)
-
-                bot.send_message(chat_id=chat_id, text=f'''Заявка на прицеп № {data_car['[placeholder="A000AA39"]'][i]} на сайте {url} заполнена!''')
-                continue
+            bot.send_message(chat_id=chat_id, text=f'''Заявка на прицеп № {data_car['[placeholder="A000AA39"]'][i]} на сайте {url} заполнена!''')
+            continue
 
         except Exception as e:
             # Ошибка возникла, записываем сообщение в журнал
@@ -360,8 +321,35 @@ def fill_zayvka(arg1, arg2, url):
 
             # Отправляем сообщение в чат бота
             bot.send_message(chat_id=chat_id, text=f"Произошла ошибка: {str(e)}")
+            continue
 
             # raise  # Повторное возбуждение ошибки для прекращения выполнения кода
 
 
 
+if __name__ == '__main__':
+    # Регистрация обработчиков
+    dispatcher.add_handler(CommandHandler('start', start))
+    dispatcher.add_handler(MessageHandler(Filters.text & (~Filters.command), handle_message))
+
+    # Запуск бота
+    updater.start_polling()
+
+    # Инициализация браузера
+    # Путь к исполняемому файлу chromedriver
+    path_to_chromedriver = '/usr/bin/chromedriver'
+
+    # Создание объекта сервиса
+    service = Service(path_to_chromedriver)
+
+    # Создание объекта опций
+    ua = UserAgent()
+    options = Options()
+    options.add_argument("--headless")  # Запуск Chrome в режиме без графического интерфейса
+    options.add_argument("--no-sandbox")
+    options.add_argument("--window-size=1920,1080")
+    options.add_argument(f"--user-agent={ua}")
+
+    # Создание экземпляра браузера Chrome
+    browser = webdriver.Chrome(service=service, options=options)
+    browser.implicitly_wait(10)
