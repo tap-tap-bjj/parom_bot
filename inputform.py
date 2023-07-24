@@ -21,7 +21,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 # Токен Telegram
 bot_token = '6384150489:AAHAh62Z2gK5VcLkiAonoXbsD_W9ttnzXUY'
 chat_id = '351583809'
-bot = Bot(token=bot_token)
+
 
 # Словарb с данными для заполнения полей
 data_car = {
@@ -43,27 +43,9 @@ data_firm = {'[placeholder="Введите должность"]': 'Ген. ди�
              '[placeholder="Введите отчество"]': 'Геннадьевич',
              '[placeholder="Введите номер"]': '+79097889191',
              '[placeholder="Введите почту"]': 'transstandart39@gmail.com'}  # Данные фирмы
+data_truck = ['С612КН39', 'С531НК39', 'P112PH39', 'T997BH39']
 
-# Создание экземпляра Updater и передача токена
-updater = Updater(token=bot_token, use_context=True)
-dispatcher = updater.dispatcher
-
-# Определение элементов меню
-menu_items1 = [['Заполнить сайт IMEX', 'Заполнить сайт TBC']]
-menu_items2 = [
-    [f'''Заполнить: {data_car['[placeholder="A000AA39"]'][0]}''', f'''Заполнить: {data_car['[placeholder="A000AA39"]'][1]}'''],
-    [f'''Заполнить: {data_car['[placeholder="A000AA39"]'][2]}''', '<<Заполнить все прицепы>>'],
-    ['Назад']
-]
-
-# Создание клавиатуры меню
-keyboard1 = ReplyKeyboardMarkup(menu_items1, resize_keyboard=True)
-keyboard2 = ReplyKeyboardMarkup(menu_items2, resize_keyboard=True)
-
-# Определение состояний
-STATE_MAIN_MENU, STATE_SITE_SELECTION, STATE_CAR_SELECTION = range(3)
-
-bot.send_message(chat_id=chat_id, text='Привет я бот для заполнения заявок нажми /start и погнали')
+platon_car_states = ''
 
 # Функция для отправки сообщений с меню
 def send_menu_message(chat_id, text, reply_markup):
@@ -73,7 +55,7 @@ def send_menu_message(chat_id, text, reply_markup):
 def start(update, context):
     user = update.effective_user
     context.user_data['state'] = STATE_MAIN_MENU
-    send_menu_message(user.id, 'Выберите сайт для заполнения:', keyboard1)
+    send_menu_message(user.id, 'Выберите сайт для заполнения или "Пороверить штрафы платона":', keyboard1)
 
 # Обработчик сообщений
 def handle_message(update, context):
@@ -205,6 +187,8 @@ def captcha():
         bot.send_message(chat_id=chat_id, text=f"Ошибка в капче (возможно не понадобилась картинка): {str(E)}")
 
 def fill_zayvka(arg1, arg2, url):
+    global browser_busy
+    browser_busy = True
     for i in range(arg1, arg2):
         try:
         # Цикл для заполнения формы первой вкладки
@@ -325,15 +309,102 @@ def fill_zayvka(arg1, arg2, url):
 
             # raise  # Повторное возбуждение ошибки для прекращения выполнения кода
 
+def view_platon_car_states(update, context):
+    user = update.effective_user
+    context.user_data['state'] = STATE_MAIN_MENU
+    """Обработчик команды /view_platon_car_states""" # Проверка сайта и вывод актуальных штрафов
+    check_site_platon(browser, 'https://rostransnadzor.gov.ru/sistema-vzimaniya-platy-platon')
+
+    # Преобразование словаря platon_car_states в строку
+    # platon_car_states_str = '\n'.join([f"{car}: {state}" for car, state in platon_car_states.items()])
+    bot.send_message(chat_id=chat_id, text=f"Состояние штрафов по машинам:\n{platon_car_states}")
+
+def check_site_platon(browser, site_url = 'https://rostransnadzor.gov.ru/sistema-vzimaniya-platy-platon'):
+    """
+    Проверяет сайт на наличие изменений.
+    Возвращает новый текст (если сайт изменился) или None (если сайт не изменился).
+    """
+    global platon_car_states
+    global browser_busy
+    if browser_busy:
+        return
+    try:
+        browser.get(site_url)
+
+        # Ожидание полной загрузки сайта
+        WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'button[data-bs-target = "#content-2"]')))
+        # Vibor ur lica
+        element = browser.find_element(By.CSS_SELECTOR, 'button[data-bs-target = "#content-2"]')
+        element.click()
+        time.sleep(1)
+
+        # Zapolnyaem mashini iz cikla i smotrim shtrafi
+        # for car in data_car:
+        #     input_auto = browser.find_element(By.CSS_SELECTOR, "#platon-input-auto-number")
+        #     input_auto.clear()
+        #     input_auto.send_keys(car)
+
+        inn_input = browser.find_element(By.CSS_SELECTOR, '#platon-input-inn')
+        inn_input.clear()
+        inn_input.send_keys('3906982908')
+
+        button = browser.find_element(By.CSS_SELECTOR, "button.btn.btn-primary.btn-lg.btn-lg_font-18.h-100")
+        button.click()
+
+        #WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.tab-pane.active")))
+        time.sleep(2)
+        new_text = browser.find_element(By.CSS_SELECTOR, "div.tab-pane.active").text
+
+        if new_text != platon_car_states:
+            platon_car_states = new_text
+            bot.send_message(chat_id=chat_id, text=f'Новый штраф платон! \n Состояние штрафов по машинам:\n{platon_car_states}')
+    except Exception as e:
+        # Ошибка возникла, записываем сообщение в журнал
+        logging.error("Произошла ошибка в проверке платона: %s", str(e))
+
+        # Отправляем сообщение в чат бота
+        bot.send_message(chat_id=chat_id, text=f"Произошла ошибка в проверке платона: {str(e)}")
 
 
 if __name__ == '__main__':
+    # Obiyavlenie bota
+    bot = Bot(token=bot_token)
+
+    # Создание экземпляра Updater и передача токена
+    updater = Updater(token=bot_token, use_context=True)
+    dispatcher = updater.dispatcher
+
+    # Определение элементов меню
+    menu_items1 = [['Заполнить сайт IMEX', 'Заполнить сайт TBC'], ['/view_platon_car_states']]
+    menu_items2 = [
+        [f'''Заполнить: {data_car['[placeholder="A000AA39"]'][0]}''',
+         f'''Заполнить: {data_car['[placeholder="A000AA39"]'][1]}'''],
+        [f'''Заполнить: {data_car['[placeholder="A000AA39"]'][2]}''', '<<Заполнить все прицепы>>'],
+        ['Назад']
+    ]
+
+    # Создание клавиатуры меню
+    keyboard1 = ReplyKeyboardMarkup(menu_items1, resize_keyboard=True)
+    keyboard2 = ReplyKeyboardMarkup(menu_items2, resize_keyboard=True)
+
+    # Определение состояний
+    STATE_MAIN_MENU, STATE_SITE_SELECTION, STATE_CAR_SELECTION = range(3)
+
+    bot.send_message(chat_id=chat_id, text='Привет я бот для заполнения заявок нажми /start и погнали')
+
     # Регистрация обработчиков
     dispatcher.add_handler(CommandHandler('start', start))
+    dispatcher.add_handler(CommandHandler('view_platon_car_states', view_platon_car_states))
     dispatcher.add_handler(MessageHandler(Filters.text & (~Filters.command), handle_message))
 
+    # УСТАНОВКА ИНТЕРВАЛА ПРОВЕРКИ!!!
+    interval = 86400
+    browser_busy = False
     # Запуск бота
     updater.start_polling()
+    # Запуск периодической проверки
+    updater.job_queue.run_repeating(check_site_platon, interval=interval)
+
 
     # Инициализация браузера
     # Путь к исполняемому файлу chromedriver
