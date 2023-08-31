@@ -16,11 +16,11 @@ import certifi
 from twocaptcha import TwoCaptcha
 from fake_useragent import UserAgent
 import requests
-
+from access_file import bot_token_test, chat_id_my
 
 # Токен Telegram
-bot_token = '6121370662:AAGuOtP_Di7TZNA4b0V4qxn1NCn_MJyijC8'
-chat_id = '351583809'
+bot_token = bot_token_test
+chat_id = chat_id_my
 
 # Peremenaya tekushego vremeni i intervala proverki
 current_time = time.strftime("%H:%M:%S", time.localtime())

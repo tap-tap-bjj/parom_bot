@@ -12,10 +12,11 @@ from telegram import Update, ReplyKeyboardMarkup, Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 import ssl
 import certifi
+from access_file import bot_token_main, chat_id_my
 
 # Токен Telegram
-bot_token = '6152013861:AAGh-ONBf89GzgvHvKZk6-6tUPEgb21idao'
-chat_id = '351583809'
+bot_token = bot_token_main
+chat_id = chat_id_my
 
 # Peremenaya tekushego vremeni
 current_time = time.strftime("%H:%M:%S", time.localtime())
