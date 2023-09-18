@@ -248,6 +248,7 @@ def fill_zayvka(arg1, arg2, url):
                 browser.execute_script("arguments[0].scrollIntoView();", input_field)
                 input_field.send_keys(value)
 
+
             # Ждем чуть и продолжить
             button = WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button.btn-success")))
             browser.execute_script("arguments[0].scrollIntoView();", button)
