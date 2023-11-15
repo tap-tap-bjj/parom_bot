@@ -11,10 +11,11 @@ from fake_useragent import UserAgent
 from twocaptcha import TwoCaptcha
 import random
 import time
+import schedule
 import logging
 from telegram import Bot, ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-from access_file import bot_token_inputform, chat_id_my
+from access_file import bot_token_inputform, chat_id_my, TWO_CAPCHA_TOKEN
 
 # Журнал логов
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -46,7 +47,7 @@ data_firm = {'[placeholder="Введите должность"]': 'Ген. ди�
              '[placeholder="Введите почту"]': 'transstandart39@gmail.com'}  # Данные фирмы
 data_truck = ['С612КН39', 'С531НК39', 'P112PH39', 'T997BH39']
 
-platon_car_states = ''
+platon_car_states = {'С612КН39':'', 'С531НК39':'', 'P112PH39':'', 'T997BH39':''}
 
 # Функция для отправки сообщений с меню
 def send_menu_message(chat_id, text, reply_markup):
@@ -129,7 +130,7 @@ dict_resut = {}
 
 #Функция принимает путь к изображению, отправляет в API 2captcha и возвращает словарь со словом
 def sender_solve(path):
-    solver = TwoCaptcha('19e92c38787ad78bdf448c4dc6a04f44')
+    solver = TwoCaptcha(TWO_CAPCHA_TOKEN)
     bot.send_message(chat_id=chat_id, text='2) Изображение отправленно для разгадывания:')
     result = solver.normal(path, param='ru')
     bot.send_message(chat_id=chat_id, text=f'3) От API пришёл ответ: {result}')
@@ -289,7 +290,7 @@ def fill_zayvka(arg1, arg2, url):
                 input_field.send_keys(value)
 
             # Действия для кнопки "Capcha"))))
-            captcha()
+            captcha(browser)
 
             bot.send_message(chat_id=chat_id, text=f"Данные заявки: \n {browser.find_element(By.CSS_SELECTOR, 'ul.list-group.mb-3').text}")
 
@@ -323,11 +324,12 @@ def view_platon_car_states(update, context):
     # platon_car_states_str = '\n'.join([f"{car}: {state}" for car, state in platon_car_states.items()])
     # bot.send_message(chat_id=chat_id, text=f"Состояние штрафов по машинам:\n{platon_car_states}")
 
-def check_site_platon(site_url = 'https://rostransnadzor.gov.ru/sistema-vzimaniya-platy-platon'):
+def check_site_platon():
     """
     Проверяет сайт на наличие изменений.
     Возвращает новый текст (если сайт изменился) или None (если сайт не изменился).
     """
+    site_url = 'https://rostransnadzor.gov.ru/sistema-vzimaniya-platy-platon'
     global platon_car_states
     global browser_busy
     if browser_busy:
@@ -343,27 +345,27 @@ def check_site_platon(site_url = 'https://rostransnadzor.gov.ru/sistema-vzimaniy
         time.sleep(1)
 
         # Zapolnyaem mashini iz cikla i smotrim shtrafi
-        # for car in data_car:
-        #     input_auto = browser.find_element(By.CSS_SELECTOR, "#platon-input-auto-number")
-        #     input_auto.clear()
-        #     input_auto.send_keys(car)
+        for car in data_truck:
+            input_auto = browser.find_element(By.CSS_SELECTOR, "#platon-input-auto-number")
+            input_auto.clear()
+            input_auto.send_keys(car)
+            inn_input = browser.find_element(By.CSS_SELECTOR, '#platon-input-inn')
+            inn_input.clear()
+            inn_input.send_keys('3906982908')
+            button = browser.find_element(By.CSS_SELECTOR, "button.btn.btn-primary.w-100.h-100")
+            button.click()
 
-        inn_input = browser.find_element(By.CSS_SELECTOR, '#platon-input-inn')
-        inn_input.clear()
-        inn_input.send_keys('3906982908')
+            #WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.tab-pane.active")))
+            time.sleep(5)
+            new_text = browser.find_element(By.CSS_SELECTOR, "div.tab-pane.active").text
 
-        button = browser.find_element(By.CSS_SELECTOR, "button.btn.btn-primary.btn-lg.btn-lg_font-18.h-100")
-        button.click()
-
-        #WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.tab-pane.active")))
-        time.sleep(10)
-        new_text = browser.find_element(By.CSS_SELECTOR, "div.tab-pane.active").text
-
-        if new_text != platon_car_states:
-            platon_car_states = new_text
-            bot.send_message(chat_id=chat_id, text=f'Новый штраф платон! \n \n Состояние штрафов по машинам:\n{platon_car_states}')
-        else:
-            return bot.send_message(chat_id=chat_id, text=f"Состояние штрафов по машинам:\n{platon_car_states}")
+            if new_text != platon_car_states[car]:
+                platon_car_states[car] = new_text
+                bot.send_message(chat_id=chat_id, text=f'Новый штраф платон! \n \n Состояние штрафов по {car}:\n{platon_car_states[car]}')
+            else:
+                bot.send_message(chat_id=chat_id, text=f"Состояние штрафов по {car}:\n{platon_car_states[car]}")
+            browser.find_element(By.CSS_SELECTOR, ".form-platon__results-link-back").click() # Возврат назад для проверки следующей авто
+            time.sleep(2)
     except Exception as e:
         # Ошибка возникла, записываем сообщение в журнал
         logging.error("Произошла ошибка в проверке платона: %s", str(e))
@@ -375,7 +377,7 @@ def check_site_platon(site_url = 'https://rostransnadzor.gov.ru/sistema-vzimaniy
 if __name__ == '__main__':
     # Инициализация браузера
     # Путь к исполняемому файлу chromedriver
-    path_to_chromedriver = '/usr/bin/chromedriver'
+    path_to_chromedriver = 'C:\chromedriver\chromedriver.exe'
 
     # Создание объекта сервиса
     service = Service(path_to_chromedriver)
@@ -389,7 +391,7 @@ if __name__ == '__main__':
     options.add_argument(f"--user-agent={ua}")
 
     # Создание экземпляра браузера Chrome
-    browser = webdriver.Chrome(service=service, options=options)
+    browser = webdriver.Chrome(options=options)
     browser.implicitly_wait(10)
 
     # Obiyavlenie bota
@@ -422,13 +424,13 @@ if __name__ == '__main__':
     dispatcher.add_handler(CommandHandler('view_platon_car_states', view_platon_car_states))
     dispatcher.add_handler(MessageHandler(Filters.text & (~Filters.command), handle_message))
 
-    # УСТАНОВКА ИНТЕРВАЛА ПРОВЕРКИ!!!
-    interval = 86400
+
     browser_busy = False
     # Запуск бота
     updater.start_polling()
-    # Запуск периодической проверки
-    updater.job_queue.run_repeating(check_site_platon, interval=interval)
+    # Запуск периодической проверки Platon
+    schedule.every().day.at("10:30").do(check_site_platon())
+
 
 
 
